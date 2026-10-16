@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="喝水">
+<meta name="theme-color" content="#0a1628">
+<meta name="description" content="简单好用的喝水提醒：定时提醒 + 一键记录，数据存在你自己的手机上。">
+<title>喝水 · 每日提醒</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:-apple-system,"SF Pro Text","PingFang SC",system-ui,sans-serif;
+  background:#0a1628;color:#eaf2ff;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;
+  padding:calc(env(safe-area-inset-top) + 26px) 22px calc(env(safe-area-inset-bottom) + 26px);
+}
+body::before{content:"";position:fixed;inset:0;z-index:0;
+  background:radial-gradient(120% 70% at 50% -10%,#1c4b7a 0%,#0a1628 60%);}
+.wrap{position:relative;z-index:1;width:100%;max-width:400px;display:flex;flex-direction:column;flex:1}
+h1{font-size:16px;font-weight:600;letter-spacing:.5px;color:#8fb4dd;margin-bottom:22px;text-align:center}
+
+.ring{position:relative;width:225px;height:225px;margin:0 auto 22px}
+.ring svg{transform:rotate(-90deg);width:100%;height:100%}
+.ring circle{fill:none;stroke-linecap:round}
+.bg{stroke:rgba(255,255,255,.09);stroke-width:13}
+.fg{stroke:url(#g);stroke-width:13;transition:stroke-dashoffset .7s cubic-bezier(.4,0,.2,1)}
+.center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ml{font-size:49px;font-weight:200;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1}
+.ml span{font-size:18px;font-weight:400;color:#8fb4dd;margin-left:3px;letter-spacing:0}
+.sub{font-size:12.5px;color:#7b9cc4;margin-top:9px}
+
+.cups{display:flex;gap:8px;justify-content:center;margin-bottom:24px;font-size:21px;height:26px;align-items:center;flex-wrap:wrap}
+.cups i{opacity:.16;font-style:normal;transition:opacity .35s,transform .35s;display:inline-block}
+.cups i.on{opacity:1;transform:scale(1.08)}
+
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%}
+button{
+  font-family:inherit;font-size:15.5px;font-weight:500;color:#eaf2ff;cursor:pointer;
+  background:rgba(255,255,255,.075);border:1px solid rgba(255,255,255,.11);
+  border-radius:16px;padding:18px 0;transition:transform .12s,background .2s;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+}
+button:active{transform:scale(.955);background:rgba(255,255,255,.15)}
+button.primary{grid-column:1/-1;background:linear-gradient(135deg,#2f7fd8,#1b5fa8);
+  border-color:rgba(120,190,255,.35);font-size:17.5px;padding:21px 0;
+  box-shadow:0 8px 28px -8px rgba(47,127,216,.75)}
+button .tag{font-size:11.5px;color:#a8c8ea;display:block;margin-top:2px;font-weight:400}
+button.link{background:none;border:none;color:#7b9cc4;font-size:13px;padding:10px;font-weight:400;text-decoration:underline;text-underline-offset:3px}
+.foot{margin-top:auto;padding-top:24px;font-size:11.5px;color:#5d7ba1;text-align:center;line-height:1.7}
+.foot b{color:#7ba8d8;font-weight:500}
+
+/* 设置面板 */
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(6,12,24,.72);
+  backdrop-filter:blur(8px);display:none;align-items:flex-end;justify-content:center}
+.sheet.show{display:flex}
+.card{width:100%;max-width:440px;background:#122236;border-radius:26px 26px 0 0;
+  padding:24px 22px calc(env(safe-area-inset-bottom) + 26px);max-height:88vh;overflow-y:auto;
+  animation:up .32s cubic-bezier(.3,1,.4,1)}
+@keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.card h2{font-size:18px;font-weight:600;margin-bottom:18px}
+.row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;
+  border-bottom:1px solid rgba(255,255,255,.07);font-size:15px}
+.row:last-of-type{border-bottom:none}
+.row small{display:block;color:#7b9cc4;font-size:11.5px;margin-top:2px;font-weight:400}
+input[type=number],input[type=time]{
+  font-family:inherit;font-size:15px;color:#eaf2ff;background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.13);border-radius:11px;padding:9px 12px;width:104px;text-align:center}
+select{font-family:inherit;font-size:15px;color:#eaf2ff;background:#1b3350;
+  border:1px solid rgba(255,255,255,.13);border-radius:11px;padding:9px 12px}
+.card button.big{width:100%;margin-top:20px;background:linear-gradient(135deg,#2f7fd8,#1b5fa8);
+  border:none;padding:17px;border-radius:15px;font-size:16px}
+.hint{background:rgba(47,127,216,.14);border:1px solid rgba(47,127,216,.3);
+  border-radius:13px;padding:13px 15px;font-size:12.5px;line-height:1.65;color:#a8c8ea;margin-top:16px}
+
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 28px);
+  transform:translate(-50%,90px);z-index:30;background:rgba(40,120,200,.96);
+  backdrop-filter:blur(20px);padding:13px 26px;border-radius:100px;font-size:14.5px;
+  font-weight:500;transition:transform .42s cubic-bezier(.2,1.2,.4,1);white-space:nowrap;
+  box-shadow:0 10px 34px -8px rgba(0,0,0,.6)}
+.toast.show{transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>今日饮水</h1>
+
+  <div class="ring">
+    <svg viewBox="0 0 225 225">
+      <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#5fc3ff"/><stop offset="100%" stop-color="#2f7fd8"/>
+      </linearGradient></defs>
+      <circle class="bg" cx="112.5" cy="112.5" r="97"/>
+      <circle class="fg" id="fg" cx="112.5" cy="112.5" r="97" stroke-dasharray="609.5" stroke-dashoffset="609.5"/>
+    </svg>
+    <div class="center">
+      <div class="ml" id="ml">0<span>ml</span></div>
+      <div class="sub" id="sub">目标 2000 ml</div>
+    </div>
+  </div>
+
+  <div class="cups" id="cups"></div>
+
+  <div class="btns">
+    <button class="primary" onclick="add(250)">＋ 喝一杯 250ml</button>
+    <button onclick="add(200)">小杯<span class="tag">200ml</span></button>
+    <button onclick="add(500)">大杯<span class="tag">500ml</span></button>
+    <button onclick="add(330)">易拉罐<span class="tag">330ml</span></button>
+    <button onclick="add(600)">保温杯<span class="tag">600ml</span></button>
+    <button class="link" onclick="openSheet()" style="grid-column:1/-1">⚙︎ 设置提醒时间与目标</button>
+  </div>
+
+  <div class="foot">
+    数据只保存在你的手机上 · 不上传任何服务器<br>
+    <b onclick="installHint()" style="cursor:pointer">📲 添加到主屏幕，像 App 一样用</b>
+  </div>
+</div>
+
+<!-- 设置面板 -->
+<div class="sheet" id="sheet" onclick="if(event.target===this)closeSheet()">
+  <div class="card">
+    <h2>设置</h2>
+    <div class="row">
+      <div>每日目标<small>推荐 1500–2500 ml</small></div>
+      <input type="number" id="sGoal" step="100" min="500" max="6000">
+    </div>
+    <div class="row">
+      <div>起床时间<small>提醒从这里开始</small></div>
+      <input type="time" id="sStart">
+    </div>
+    <div class="row">
+      <div>睡觉时间<small>提醒到这里结束</small></div>
+      <input type="time" id="sEnd">
+    </div>
+    <div class="row">
+      <div>提醒间隔<small>多久提醒一次</small></div>
+      <select id="sGap">
+        <option value="60">每 1 小时</option>
+        <option value="90">每 1.5 小时</option>
+        <option value="120">每 2 小时</option>
+        <option value="150">每 2.5 小时</option>
+      </select>
+    </div>
+    <div class="row">
+      <div>浏览器通知<small id="notifyState">未开启</small></div>
+      <button class="link" style="text-decoration:none;color:#5fc3ff" onclick="askNotify()">开启</button>
+    </div>
+    <button class="big" onclick="saveSheet()">保存</button>
+    <div class="hint" id="hintBox">
+      提示：浏览器通知在页面打开时有效。想要真正定时推送，请把本页<b>添加到主屏幕</b>后再开启通知。
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const C = 609.5;
+const DEFAULTS = { goal:2000, start:'09:00', end:'23:00', gap:90 };
+const KEY = 'waterApp.v1';
+
+let cfg = load(KEY + '.cfg', DEFAULTS);
+let log = load(KEY + '.log', {});      // { '2026-10-16': 250, ... }
+
+function load(k, fb){ try{ return Object.assign({}, fb, JSON.parse(localStorage.getItem(k)||'{}')); }catch(e){ return fb; } }
+function save(){ try{ localStorage.setItem(KEY+'.cfg', JSON.stringify(cfg));
+  localStorage.setItem(KEY+'.log', JSON.stringify(log)); }catch(e){} }
+function today(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function mlToday(){ return log[today()] || 0; }
+
+function render(){
+  const ml = mlToday(), goal = cfg.goal;
+  document.getElementById('ml').innerHTML = ml + '<span>ml</span>';
+  document.getElementById('sub').textContent =
+    ml >= goal ? '🎉 目标达成！' : '还差 ' + (goal - ml) + ' ml · 目标 ' + goal + ' ml';
+  document.getElementById('fg').style.strokeDashoffset = C * (1 - Math.min(1, ml/goal));
+
+  const el = document.getElementById('cups');
+  const n = Math.max(8, Math.ceil(goal/250)), filled = Math.round(ml/250);
+  if (el.children.length !== n){
+    el.innerHTML='';
+    for(let i=0;i<n;i++) el.appendChild(document.createElement('i')).textContent='💧';
+  }
+  [...el.children].forEach((c,i)=>c.classList.toggle('on', i<filled));
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),1900);
+}
+
+function add(ml){
+  const t = today();
+  log[t] = (log[t]||0) + ml;
+  save(); render();
+  toast('已记录 ' + ml + ' ml · 今日 ' + log[t] + ' ml');
+  if (navigator.vibrate) try{ navigator.vibrate(18); }catch(e){}
+}
+
+/* ---------- 提醒 ---------- */
+let timers = [];
+function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
+
+function nextSlots(){
+  // 今天剩余 + 明天的提醒时间点
+  const [sh,sm] = cfg.start.split(':').map(Number);
+  const [eh,em] = cfg.end.split(':').map(Number);
+  const out=[];
+  for (const dayOffset of [0,1]){
+    const base = new Date(); base.setDate(base.getDate()+dayOffset); base.setSeconds(0,0);
+    const start = new Date(base); start.setHours(sh,sm,0,0);
+    const end = new Date(base); end.setHours(eh,em,0,0);
+    for(let t=new Date(start); t<=end; t=new Date(t.getTime()+cfg.gap*60000)){
+      if (t.getTime() > Date.now()+30000) out.push(new Date(t));
+    }
+  }
+  return out;
+}
+
+function scheduleNotifications(){
+  clearTimers();
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  nextSlots().forEach(t=>{
+    const ms = t - Date.now();
+    if (ms > 0 && ms < 2147483647)
+      timers.push(setTimeout(()=>{
+        try{
+          const n = new Notification('该喝水了 💧', {
+            body: '喝一杯水，让身体保持水分。',
+            tag: 'water-'+t.getTime(),
+            badge: undefined
+          });
+          n.onclick = ()=>{ window.focus(); n.close(); };
+        }catch(e){}
+      }, ms));
+  });
+}
+
+function askNotify(){
+  if (!('Notification' in window)){ toast('此浏览器不支持通知'); return; }
+  Notification.requestPermission().then(p=>{
+    document.getElementById('notifyState').textContent =
+      p==='granted' ? '已开启 ✅' : p==='denied' ? '被拒绝，去设置里改' : '未开启';
+    if (p==='granted'){ scheduleNotifications(); toast('通知已开启'); }
+  });
+}
+
+/* ---------- 设置面板 ---------- */
+function openSheet(){
+  document.getElementById('sGoal').value = cfg.goal;
+  document.getElementById('sStart').value = cfg.start;
+  document.getElementById('sEnd').value = cfg.end;
+  document.getElementById('sGap').value = cfg.gap;
+  refreshNotifyState();
+  document.getElementById('sheet').classList.add('show');
+}
+function closeSheet(){ document.getElementById('sheet').classList.remove('show'); }
+function refreshNotifyState(){
+  const el = document.getElementById('notifyState');
+  el.textContent = !('Notification' in window) ? '不支持'
+    : Notification.permission==='granted' ? '已开启 ✅'
+    : Notification.permission==='denied' ? '被拒绝' : '未开启';
+}
+function saveSheet(){
+  cfg.goal  = Math.max(500, Math.min(6000, parseInt(document.getElementById('sGoal').value)||2000));
+  cfg.start = document.getElementById('sStart').value || '09:00';
+  cfg.end   = document.getElementById('sEnd').value   || '23:00';
+  cfg.gap   = parseInt(document.getElementById('sGap').value) || 90;
+  save(); render(); scheduleNotifications(); closeSheet();
+  toast('已保存 · 每天 ' + cfg.start + '–' + cfg.end + ' 提醒');
+}
+function installHint(){
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/.test(ua);
+  toast(ios ? '点底部 ⤴ 分享按钮 → 添加到主屏幕' : '浏览器菜单 → 添加到主屏幕');
+}
+
+/* ---------- 启动 ---------- */
+render();
+scheduleNotifications();
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ render(); scheduleNotifications(); }});
+setInterval(render, 60000);
+</script>
+</body>
+</html>
